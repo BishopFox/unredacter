@@ -84,7 +84,7 @@ ipcMain.on('redact', async (event, message) => {
   })
 
   //TODO Do this less janky
-  var htmlstring = 'data:text/html;charset=utf-8,<HTML/><body style="background-color:white;"><div style="font-size: 48px">XYZXYZ</div></body></HTML>'
+  var htmlstring = 'data:text/html;charset=utf-8,<HTML/><body style="background-color:white;"><div style="font-size: 32px; font-family:\'Liberation Serif\'">XYZXYZ</div></body></HTML>'
   await win.loadURL(htmlstring.replace('XYZXYZ', message.text));
   // win.loadFile(path.join(__dirname, "../redact_template.html"))
   // win.webContents.send("")
@@ -97,24 +97,45 @@ ipcMain.on('redact', async (event, message) => {
   console.log(imageData.length);
   console.log(imageData);
 
-  Jimp.read(imageData)
-  .then(image => {
+  const blockSize = 8;
+
+  Jimp.read(imageData).then(image => {
     // Do stuff with the image.
-    image.writeAsync("blaaaaaaaah1.png");
-    image.pixelate(6).writeAsync("blaaaaaaaah2.png");
+    var original = image.clone();
+    original.scan(0, 0, original.bitmap.width, original.bitmap.height, function(x, y, idx) {
+      // x, y is the position of this pixel on the image
+      // idx is the position start position of this rgba tuple in the bitmap Buffer
+      // this is the image
+
+      // var red = this.bitmap.data[idx + 0];
+      // var green = this.bitmap.data[idx + 1];
+      // var blue = this.bitmap.data[idx + 2];
+      // var alpha = this.bitmap.data[idx + 3];
+
+      // Get the running RGBA totals for the relevant NxN block
+      var upper_left_x = ~~(x / 8) * blockSize;
+      var upper_left_y = ~~(y / 8) * blockSize;
+      var red = 0;
+      var green = 0;
+      var blue = 0;
+      var alpha = 0;
+      const rowsize = original.bitmap.width * 4;
+      for (var i = 0; i < blockSize; i ++) {
+        for (var j = 0; j < blockSize; j ++) {
+          red += this.bitmap.data[((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 0];
+          green += this.bitmap.data[((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 1];
+          blue += this.bitmap.data[((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 2];
+          alpha += this.bitmap.data[((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 3];
+        }
+      }
+
+      image.bitmap.data[idx + 0] = red / (blockSize * blockSize);
+      image.bitmap.data[idx + 1] = green / (blockSize * blockSize);
+      image.bitmap.data[idx + 2] = blue / (blockSize * blockSize);
+      image.bitmap.data[idx + 3] = alpha / (blockSize * blockSize);
+    });
+
+    image.writeAsync("redacted.png");
+    original.writeAsync("original.png");
   });
-
-
-  // var i = 0;
-  // while (i < imageData.length) {
-  //   console.log(imageData[i]);
-  //   i++;
-  // }
-
-  // nativeImage.createFromBuffer(buffer[, options])​
-
-  // fs.writeFile("blahblah.png", imageData, {mode: 0o600, encoding: null}, (err: Error) => {
-  //   err ? console.error(err) : null;
-  // });
-
 });

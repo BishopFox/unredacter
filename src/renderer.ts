@@ -16,6 +16,6 @@ async function playClip(clip: string) {
 document.getElementById('start-button').addEventListener('click', () => {
   window.postMessage({
     command: 'redact',
-    text: "This is super secret",
+    text: "this is super secret",
   }, "*");
 })
