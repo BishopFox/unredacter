@@ -62,8 +62,6 @@ ipcMain.on('ipc', (event, arg) => {
 })
 
 ipcMain.on('redact', async (event, message) => {
-  console.log('got an IPC message', message.command, message.text);
-
   const win = new BrowserWindow({
     width: 800,
     height: 600,
@@ -90,13 +88,7 @@ ipcMain.on('redact', async (event, message) => {
   // win.webContents.send("")
 
   const image = await win.capturePage();
-  console.log(image);
-  console.log(image.getSize());
-
   const imageData = image ? image.toPNG() : Buffer.from('');
-  console.log(imageData.length);
-  console.log(imageData);
-
   const blockSize = 8;
 
   Jimp.read(imageData).then(image => {
@@ -107,32 +99,53 @@ ipcMain.on('redact', async (event, message) => {
       // idx is the position start position of this rgba tuple in the bitmap Buffer
       // this is the image
 
-      // var red = this.bitmap.data[idx + 0];
-      // var green = this.bitmap.data[idx + 1];
-      // var blue = this.bitmap.data[idx + 2];
-      // var alpha = this.bitmap.data[idx + 3];
-
       // Get the running RGBA totals for the relevant NxN block
-      var upper_left_x = ~~(x / 8) * blockSize;
-      var upper_left_y = ~~(y / 8) * blockSize;
+      var upper_left_x = ~~(x / blockSize) * blockSize;
+      var upper_left_y = ~~(y / blockSize) * blockSize;
       var red = 0;
       var green = 0;
       var blue = 0;
       var alpha = 0;
       const rowsize = original.bitmap.width * 4;
+      var pixelCount = 0;
       for (var i = 0; i < blockSize; i ++) {
         for (var j = 0; j < blockSize; j ++) {
-          red += this.bitmap.data[((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 0];
-          green += this.bitmap.data[((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 1];
-          blue += this.bitmap.data[((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 2];
-          alpha += this.bitmap.data[((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 3];
+          // Red
+          const redIndex = ((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 0;
+          if (redIndex < this.bitmap.data.length) {
+            red += this.bitmap.data[((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 0];
+            pixelCount += 1;
+          }
+
+          // Green
+          const greenIndex = ((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 0;
+          if (greenIndex < this.bitmap.data.length) {
+            green += this.bitmap.data[((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 1];
+          }
+
+          // Blue
+          const blueIndex = ((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 0;
+          if (blueIndex < this.bitmap.data.length) {
+            blue += this.bitmap.data[((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 2];
+          }
+
+          // Alpha
+          const alphaIndex = ((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 0;
+          if (alphaIndex < this.bitmap.data.length) {
+            alpha += this.bitmap.data[((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 3];
+          }
+
+          // red   += this.bitmap.data[((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 0];
+          // green += this.bitmap.data[((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 1];
+          // blue  += this.bitmap.data[((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 2];
+          // alpha += this.bitmap.data[((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 3];
         }
       }
 
-      image.bitmap.data[idx + 0] = red / (blockSize * blockSize);
-      image.bitmap.data[idx + 1] = green / (blockSize * blockSize);
-      image.bitmap.data[idx + 2] = blue / (blockSize * blockSize);
-      image.bitmap.data[idx + 3] = alpha / (blockSize * blockSize);
+      image.bitmap.data[idx + 0] = red   / pixelCount;
+      image.bitmap.data[idx + 1] = green / pixelCount;
+      image.bitmap.data[idx + 2] = blue  / pixelCount;
+      image.bitmap.data[idx + 3] = alpha / pixelCount;
     });
 
     image.writeAsync("redacted.png");
