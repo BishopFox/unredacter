@@ -134,11 +134,6 @@ ipcMain.on('redact', async (event, message) => {
           if (alphaIndex < this.bitmap.data.length) {
             alpha += this.bitmap.data[((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 3];
           }
-
-          // red   += this.bitmap.data[((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 0];
-          // green += this.bitmap.data[((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 1];
-          // blue  += this.bitmap.data[((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 2];
-          // alpha += this.bitmap.data[((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 3];
         }
       }
 
@@ -150,5 +145,6 @@ ipcMain.on('redact', async (event, message) => {
 
     image.writeAsync("redacted.png");
     original.writeAsync("original.png");
+    console.log(Jimp.distance(image, original));
   });
 });
