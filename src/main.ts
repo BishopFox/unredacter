@@ -93,7 +93,17 @@ ipcMain.on('redact', async (event, message) => {
   const imageData = image ? image.toPNG() : Buffer.from('');
   const blockSize = 8;
 
-  Jimp.read(imageData).then(image => {
+  var gimp_width = 0;
+  var gimp_height = 0;
+  await Jimp.read(path.join(__dirname, "../redacted_gimp_8x8.png")).then(gimp_image => {
+    gimp_width = gimp_image.bitmap.width;
+    gimp_height = gimp_image.bitmap.height;
+  });
+
+  await Jimp.read(imageData).then(image => {
+    // TODO HARDCODED
+    image.crop(8, 8, gimp_width, gimp_height);
+
     // Do stuff with the image.
     var original = image.clone();
     original.scan(0, 0, original.bitmap.width, original.bitmap.height, function(x, y, idx) {
@@ -101,64 +111,75 @@ ipcMain.on('redact', async (event, message) => {
       // idx is the position start position of this rgba tuple in the bitmap Buffer
       // this is the image
 
-      // Get the running RGBA totals for the relevant NxN block
-      var upper_left_x = ~~(x / blockSize) * blockSize;
-      var upper_left_y = ~~(y / blockSize) * blockSize;
-      var red = 0;
-      var green = 0;
-      var blue = 0;
-      var alpha = 0;
-      const rowsize = original.bitmap.width * 4;
-      var pixelCount = 0;
-      for (var i = 0; i < blockSize; i ++) {
-        for (var j = 0; j < blockSize; j ++) {
-          // Red
-          const redIndex = ((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 0;
-          if (redIndex < this.bitmap.data.length) {
-            red += this.bitmap.data[((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 0];
-            pixelCount += 1;
-          }
+      // Only do this calculation if the image and original are identical for this pixel
+      //  If they're different, then we've already modified this pixel. Move on
+      if ((original.bitmap.data[idx] === image.bitmap.data[idx]) && (original.bitmap.data[idx+1] === image.bitmap.data[idx+1]) &&
+         (original.bitmap.data[idx+2] === image.bitmap.data[idx+2]) && (original.bitmap.data[idx+3] === image.bitmap.data[idx+3]))
+      {
 
-          // Green
-          const greenIndex = ((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 0;
-          if (greenIndex < this.bitmap.data.length) {
-            green += this.bitmap.data[((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 1];
-          }
+        // Get the running RGBA totals for the relevant NxN block
+        var upper_left_x = ~~(x / blockSize) * blockSize;
+        var upper_left_y = ~~(y / blockSize) * blockSize;
+        var red = 0;
+        var green = 0;
+        var blue = 0;
+        var alpha = 0;
+        const rowsize = original.bitmap.width * 4;
+        var pixelCount = 0;
+        for (var i = 0; i < blockSize; i ++) {
+          for (var j = 0; j < blockSize; j ++) {
+            // Red
+            const redIndex = ((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 0;
+            if (redIndex < this.bitmap.data.length) {
+              red += this.bitmap.data[((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 0];
+              pixelCount += 1;
+            }
 
-          // Blue
-          const blueIndex = ((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 0;
-          if (blueIndex < this.bitmap.data.length) {
-            blue += this.bitmap.data[((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 2];
-          }
+            // Green
+            const greenIndex = ((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 0;
+            if (greenIndex < this.bitmap.data.length) {
+              green += this.bitmap.data[((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 1];
+            }
 
-          // Alpha
-          const alphaIndex = ((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 0;
-          if (alphaIndex < this.bitmap.data.length) {
-            alpha += this.bitmap.data[((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 3];
+            // Blue
+            const blueIndex = ((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 0;
+            if (blueIndex < this.bitmap.data.length) {
+              blue += this.bitmap.data[((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 2];
+            }
+
+            // Alpha
+            const alphaIndex = ((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 0;
+            if (alphaIndex < this.bitmap.data.length) {
+              alpha += this.bitmap.data[((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 3];
+            }
+          }
+        }
+
+        // Now fill in the pixels for the whole block
+        for (var i = 0; i < blockSize; i ++) {
+          for (var j = 0; j < blockSize; j ++) {
+            if ((upper_left_x + i) < original.bitmap.width && (upper_left_y + j) < original.bitmap.height){
+              image.bitmap.data[((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 0] = red   / pixelCount;
+              image.bitmap.data[((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 1] = green / pixelCount;
+              image.bitmap.data[((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 2] = blue  / pixelCount;
+              image.bitmap.data[((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 3] = alpha / pixelCount;
+            }
           }
         }
       }
-
-      image.bitmap.data[idx + 0] = red   / pixelCount;
-      image.bitmap.data[idx + 1] = green / pixelCount;
-      image.bitmap.data[idx + 2] = blue  / pixelCount;
-      image.bitmap.data[idx + 3] = alpha / pixelCount;
-    });
-
-    image.autocrop();
-    original.autocrop();
-    // console.log(Jimp.diff(image, original));
+    }
+    );
 
     Jimp.read(path.join(__dirname, "../redacted_gimp_8x8.png")).then(gimp_image => {
-      // console.log(Jimp.diff(gimp_image, image).percent);
-
       const threshold = 0.02;
-
       const percent_tried = message.text.length / message.totalLength
-      // console.log(percent_tried, message.totalLength, message.text.length, gimp_image.bitmap.width, gimp_image.bitmap.height);
-      gimp_image.crop(0, 0, gimp_image.bitmap.width * percent_tried, gimp_image.bitmap.height);
 
-      const diff = Jimp.diff(gimp_image, image.brightness(0.4), threshold).percent;
+      // Crop both images and adjust brightness
+      image.crop(0, 0, image.bitmap.width * percent_tried, 40);
+      gimp_image.crop(0, 0, image.bitmap.width, image.bitmap.height);
+      image.brightness(0.4);    // TODO HARDCODED
+
+      const diff = Jimp.diff(gimp_image, image, threshold).percent;
       console.log(message.text, diff);
 
       mainWindow.webContents.send('gatherResults', {guess: message.text, score: diff});
@@ -168,7 +189,6 @@ ipcMain.on('redact', async (event, message) => {
     });
 
     image.writeAsync("redacted.png");
-    // original.writeAsync("original.png");
 
   });
 });

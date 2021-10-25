@@ -19,7 +19,7 @@ document.getElementById('start-button').addEventListener('click', () => {
   var guessable_characters = 'abcdefghijklmnopqrstuvwxyz ';
 
   for (let i = 0; i < guessable_characters.length; i++) {
-    makeGuess("" + guessable_characters[i]);
+    makeGuess("thi" + guessable_characters[i]);
   }
 })
 
