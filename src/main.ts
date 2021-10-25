@@ -65,7 +65,7 @@ ipcMain.on('redact', async (event, message) => {
   const win = new BrowserWindow({
     width: 800,
     height: 600,
-    show: true,
+    show: false,
     webPreferences: {
       sandbox: true,
       webSecurity: true,
@@ -86,6 +86,8 @@ ipcMain.on('redact', async (event, message) => {
   await win.loadURL(htmlstring.replace('XYZXYZ', message.text));
   // win.loadFile(path.join(__dirname, "../redact_template.html"))
   // win.webContents.send("")
+
+  console.log("got " + message.text);
 
   const image = await win.capturePage();
   const imageData = image ? image.toPNG() : Buffer.from('');
@@ -143,8 +145,30 @@ ipcMain.on('redact', async (event, message) => {
       image.bitmap.data[idx + 3] = alpha / pixelCount;
     });
 
+    image.autocrop();
+    original.autocrop();
+    // console.log(Jimp.diff(image, original));
+
+    Jimp.read(path.join(__dirname, "../redacted_gimp_8x8.png")).then(gimp_image => {
+      // console.log(Jimp.diff(gimp_image, image).percent);
+
+      const threshold = 0.02;
+
+      const percent_tried = message.text.length / message.totalLength
+      // console.log(percent_tried, message.totalLength, message.text.length, gimp_image.bitmap.width, gimp_image.bitmap.height);
+      gimp_image.crop(0, 0, gimp_image.bitmap.width * percent_tried, gimp_image.bitmap.height);
+
+      const diff = Jimp.diff(gimp_image, image.brightness(0.4), threshold).percent;
+      console.log(message.text, diff);
+
+      mainWindow.webContents.send('gatherResults', {guess: message.text, score: diff});
+
+      gimp_image.writeAsync("gimp_original.png");
+
+    });
+
     image.writeAsync("redacted.png");
-    original.writeAsync("original.png");
-    console.log(Jimp.distance(image, original));
+    // original.writeAsync("original.png");
+
   });
 });

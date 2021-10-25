@@ -11,8 +11,10 @@ window.addEventListener("DOMContentLoaded", () => {
   };
 });
 
-ipcRenderer.on('play-clip', (event, ...args) => {
-  window.postMessage(args, "file://");
+ipcRenderer.on('gatherResults', (event, ...args) => {
+  // console.log("preload: ", ...args);
+  // console.log("preload: ", args[0]);
+  window.postMessage(args[0], "file://");
 });
 
 process.once('loaded', () => {

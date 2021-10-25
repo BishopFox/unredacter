@@ -6,16 +6,30 @@
 // needed in the renderer process.
 
 window.addEventListener("message", (event) => {
-  playClip(event.data.toString());
+  if (event) {
+    gatherResults(event.data.guess, event.data.score);
+  }
 });
 
-async function playClip(clip: string) {
-  console.log(clip)
+async function gatherResults(guess: string, score: number) {
+  console.log(guess, score)
 }
 
 document.getElementById('start-button').addEventListener('click', () => {
+  var guessable_characters = 'abcdefghijklmnopqrstuvwxyz ';
+
+  for (let i = 0; i < guessable_characters.length; i++) {
+    makeGuess("" + guessable_characters[i]);
+  }
+})
+
+async function makeGuess(guess: string) {
   window.postMessage({
     command: 'redact',
-    text: "this is super secret",
+    text: guess,
+    totalLength: 20,
   }, "*");
-})
+}
+
+// "this is super secret"
+// "xxxxxxxxxxxxxxxxxxxx"
