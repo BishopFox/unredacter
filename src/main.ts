@@ -100,7 +100,7 @@ ipcMain.on('redact', async (event, message) => {
     gimp_height = gimp_image.bitmap.height;
   });
 
-  await Jimp.read(imageData).then(image => {
+  await Jimp.read(imageData).then(async (image) => {
     // TODO HARDCODED
     image.crop(8, 8, gimp_width, gimp_height);
 
@@ -170,7 +170,7 @@ ipcMain.on('redact', async (event, message) => {
     }
     );
 
-    Jimp.read(path.join(__dirname, "../redacted_gimp_8x8.png")).then(gimp_image => {
+    Jimp.read(path.join(__dirname, "../redacted_gimp_8x8.png")).then(async (gimp_image) => {
       const threshold = 0.02;
       const percent_tried = message.text.length / message.totalLength
 
@@ -182,7 +182,9 @@ ipcMain.on('redact', async (event, message) => {
       const diff = Jimp.diff(gimp_image, image, threshold).percent;
       console.log(message.text, diff);
 
-      mainWindow.webContents.send('gatherResults', {guess: message.text, score: diff});
+      const dataURI = await image.getBase64Async(Jimp.MIME_PNG);
+
+      mainWindow.webContents.send('gatherResults', {guess: message.text, score: diff, imageData: dataURI});
 
       gimp_image.writeAsync("gimp_original.png");
 

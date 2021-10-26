@@ -5,7 +5,7 @@
     <title>Unredacter</title>
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'"
+      content="default-src 'self'; script-src 'self'; img-src 'self' data:;"
     />
     <meta
       http-equiv="X-Content-Security-Policy"
@@ -13,8 +13,19 @@
     />
   </head>
   <body>
-    <div id="title-label">Yay</div>
-    <button id="start-button">Click Me</button>
+    <button id="start-button">Click to Start</button>
+
+    <br><br>
+    <label>Redacted Text:</label>
+    <br>
+    <image id="original-image" src="redacted_gimp_8x8.png"/>
+    <br>
+    <label>Current Best Guess:</label>
+    <br>
+    <image id="preview-image" src=""/>
+    <br>
+    <input type="text" id="best-guess">
+    <br>
 
     <!-- You can also require other files to run in this process -->
     <script src="./dist/renderer.js"></script>
