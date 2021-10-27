@@ -23,7 +23,9 @@ process.once('loaded', () => {
     const message = event.data;
 
     if (message.command === 'redact') {
-      ipcRenderer.send('redact', message);
+      ipcRenderer.invoke('redact', message).then((result) => {
+        console.log("invoked redaction on : ", message.text, result);
+      });
     }
   });
 });

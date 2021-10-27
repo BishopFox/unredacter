@@ -53,15 +53,15 @@ app.on("window-all-closed", () => {
   }
 });
 
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and require them here.
-ipcMain.on('ipc', (event, arg) => {
-  if (arg === "start") {
-    console.log("got it!")
-  }
+// Main process
+ipcMain.handle('redact', async (event, message) => {
+  const result = await redact(message);
+  return result
 })
 
-ipcMain.on('redact', async (event, message) => {
+async function redact(message: any) {
+  var result: any;
+
   const win = new BrowserWindow({
     width: 800,
     height: 600,
@@ -86,8 +86,6 @@ ipcMain.on('redact', async (event, message) => {
   await win.loadURL(htmlstring.replace('XYZXYZ', message.text));
   // win.loadFile(path.join(__dirname, "../redact_template.html"))
   // win.webContents.send("")
-
-  console.log("got " + message.text);
 
   const image = await win.capturePage();
   const imageData = image ? image.toPNG() : Buffer.from('');
@@ -170,7 +168,7 @@ ipcMain.on('redact', async (event, message) => {
     }
     );
 
-    Jimp.read(path.join(__dirname, "../redacted_gimp_8x8.png")).then(async (gimp_image) => {
+    await Jimp.read(path.join(__dirname, "../redacted_gimp_8x8.png")).then(async (gimp_image) => {
       const threshold = 0.02;
       const percent_tried = message.text.length / message.totalLength
 
@@ -179,18 +177,18 @@ ipcMain.on('redact', async (event, message) => {
       gimp_image.crop(0, 0, image.bitmap.width, image.bitmap.height);
       image.brightness(0.4);    // TODO HARDCODED
 
-      const diff = Jimp.diff(gimp_image, image, threshold).percent;
-      console.log(message.text, diff);
+      const diff = await Jimp.diff(gimp_image, image, threshold).percent;
+      // console.log(message.text, diff);
 
       const dataURI = await image.getBase64Async(Jimp.MIME_PNG);
 
-      mainWindow.webContents.send('gatherResults', {guess: message.text, score: diff, imageData: dataURI});
+      // mainWindow.webContents.send('gatherResults', {guess: message.text, score: diff, imageData: dataURI});
 
       gimp_image.writeAsync("gimp_original.png");
-
+      image.writeAsync("redacted.png");
+      result = {guess: message.text, score: diff, imageData: dataURI};
     });
-
-    image.writeAsync("redacted.png");
-
   });
-});
+  await result;
+  return result;
+};
