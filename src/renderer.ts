@@ -9,42 +9,37 @@ var best_guess = "";
 var best_score = 1;
 
 window.addEventListener("message", (event) => {
+  // console.log("LISTENER: ", event.data.guess, event.data.score, event.data.imageData);
   if (event) {
     gatherResults(event.data.guess, event.data.score, event.data.imageData);
   }
 });
 
 async function gatherResults(guess: string, score: number, imageData: string) {
-  console.log(guess, score);
 
   if ((score < best_score) && (guess.length >= best_guess.length)) {
     best_score = score;
     best_guess = guess;
 
-    var imageElement = <HTMLImageElement>document.getElementById("preview-image");
+    var imageElement = <HTMLImageElement>document.getElementById("best-preview-image");
     imageElement.src = imageData;
 
     var labelElement = <HTMLInputElement>document.getElementById("best-guess");
+    labelElement.value = guess;
+  } else {
+    var imageElement = <HTMLImageElement>document.getElementById("current-preview-image");
+    imageElement.src = imageData;
+    var labelElement = <HTMLInputElement>document.getElementById("current-guess");
     labelElement.value = guess;
   }
 }
 
 document.getElementById('start-button').addEventListener('click', () => {
-  var guessable_characters = 'abcdefghijklmnopqrstuvwxyz ';
-
-  // Depth first search
-  for (let i = 0; i < guessable_characters.length; i++) {
-    makeGuess("thi" + guessable_characters[i]);
-  }
+  window.postMessage({
+    command: 'start-redacting',
+  }, "*");
 })
 
-async function makeGuess(guess: string) {
-  window.postMessage({
-    command: 'redact',
-    text: guess,
-    totalLength: 20,
-  }, "*");
-}
 
 // "this is super secret"
 // "xxxxxxxxxxxxxxxxxxxx"

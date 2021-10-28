@@ -11,21 +11,37 @@ window.addEventListener("DOMContentLoaded", () => {
   };
 });
 
-ipcRenderer.on('gatherResults', (event, ...args) => {
-  // console.log("preload: ", ...args);
-  // console.log("preload: ", args[0]);
-  window.postMessage(args[0], "file://");
-});
+// ipcRenderer.on('gatherResults', (event, ...args) => {
+//   // console.log("preload: ", ...args);
+//   // console.log("preload: ", args[0]);
+//   window.postMessage(args[0], "file://");
+// });
 
 process.once('loaded', () => {
-  window.addEventListener('message', event => {
+  window.addEventListener('message', async (event) => {
     // do something with custom event
     const message = event.data;
 
-    if (message.command === 'redact') {
-      ipcRenderer.invoke('redact', message).then((result) => {
-        console.log("invoked redaction on : ", message.text, result);
-      });
+    if (message.command === 'start-redacting') {
+
+      // Do a depth-first search
+      var guess = "t";
+      var guessable_characters = 'abcdefghijklmnopqrstuvwxyz ';
+
+      // Depth first search
+      for (let i = 0; i < guessable_characters.length; i++) {
+        var score = await makeGuess(guess + guessable_characters[i]);
+        console.log(guess + guessable_characters[i], score);
+      }
     }
   });
 });
+
+async function makeGuess(guess: string) {
+  // TODO HARDCODED TOTAL LENGTH
+  const request = {command: "start-redacting", totalLength: 20, text: guess}
+  const result = await ipcRenderer.invoke('redact', request);
+  // Send back to DOM to display results on page
+  window.postMessage(result, "file://");
+  return result;
+}
