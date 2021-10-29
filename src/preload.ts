@@ -41,7 +41,7 @@ async function guessRecursive(guess: string, score: number) {
   if (guess.length === max_length) {
     return;
   }
-  var scores = new Map();
+  var scores = [];
 
   for (let i = 0; i < guessable_characters.length; i++) {
     const nextGuess = guess + guessable_characters[i];
@@ -50,19 +50,39 @@ async function guessRecursive(guess: string, score: number) {
     console.log("score: ", nextGuess, result.score - score);
 
     // Discard bad guess scores
-    if (result.score - score < 0.4) {
-      scores.set(result.score, nextGuess);
-    }
+    // if (result.score - score < 0.4) {
+    scores.push([result.score, nextGuess]);
+    // }
   }
 
   // Now sort the results by score
-  var mapAsc = new Map([...scores.entries()].sort());
+  // var mapAsc = new Map([...scores.entries()].sort());
+  scores.sort();
+  console.log(scores);
 
+  // This is a bad guess if all the sub-guesses have the same score.
+  //  At least one of the guesses should matter. They can't all be good.
+  //  but they can definitely all be bad.
+  // Grab the worst guess, and then discard everything within a threshold of that.
+
+  // I can't figure out how to sort this in reverse order, so fuck it
+  var worst_score = 0;
+  for (let i = 0; i < scores.length; i++) {
+    if (scores[i][0] > worst_score){
+      worst_score = scores[i][0];
+    }
+  }
+  console.log("worst score: ", worst_score);
+
+  const threshold = 0.3;
   // Do the whole thing again for each of these new guesses
-  for (const entry of mapAsc.entries()) {
-    const newScore = entry[0];
-    const newGuess = entry[1];
-    await guessRecursive(newGuess, newScore);
+  for (let i = 0; i < scores.length; i++) {
+    const newScore = scores[i][0];
+    const newGuess = scores[i][1];
+
+    if (newScore < worst_score - (threshold/newGuess.length)) {
+      await guessRecursive(newGuess, newScore);
+    }
   }
 }
 
