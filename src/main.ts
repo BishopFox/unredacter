@@ -88,6 +88,7 @@ async function redact(message: any) {
   // win.webContents.send("")
 
   const image = await win.capturePage();
+  win.destroy();
   const imageData = image ? image.toPNG() : Buffer.from('');
   const blockSize = 8;
 

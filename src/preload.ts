@@ -30,12 +30,12 @@ process.once('loaded', () => {
 
       var guess = "t";
       // Initial call to the recursive function
-      var score = await guessRecursive(guess);
+      var score = await guessRecursive(guess, 0);
     }
   });
 });
 
-async function guessRecursive(guess: string) {
+async function guessRecursive(guess: string, score: number) {
 
   // First, make a direct guess for all characters appended on
   if (guess.length === max_length) {
@@ -44,11 +44,14 @@ async function guessRecursive(guess: string) {
   var scores = new Map();
 
   for (let i = 0; i < guessable_characters.length; i++) {
-    var result = await makeGuess(guess + guessable_characters[i]);
-    console.log("score: ", result);
-    // Discard bad scores
-    if (result.score < 0.5) {
-      scores.set(result.score, guess + guessable_characters[i]);
+    const nextGuess = guess + guessable_characters[i];
+    var result = await makeGuess(nextGuess);
+    // How much worse did the score get?
+    console.log("score: ", nextGuess, result.score - score);
+
+    // Discard bad guess scores
+    if (result.score - score < 0.4) {
+      scores.set(result.score, nextGuess);
     }
   }
 
@@ -57,9 +60,9 @@ async function guessRecursive(guess: string) {
 
   // Do the whole thing again for each of these new guesses
   for (const entry of mapAsc.entries()) {
-    const score = entry[0];
-    const guess = entry[1];
-    await guessRecursive(guess);
+    const newScore = entry[0];
+    const newGuess = entry[1];
+    await guessRecursive(newGuess, newScore);
   }
 }
 

@@ -17,7 +17,7 @@ window.addEventListener("message", (event) => {
 
 async function gatherResults(guess: string, score: number, imageData: string) {
 
-  if ((score < best_score) && (guess.length >= best_guess.length)) {
+  if ((guess.length > best_guess.length) || ((score < best_score) && (guess.length >= best_guess.length))) {
     best_score = score;
     best_guess = guess;
 
