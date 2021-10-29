@@ -5,6 +5,7 @@ import * as fs from 'fs';
 import Jimp from 'jimp';
 
 var mainWindow: any = null
+var redacted_image: any = null
 
 function createWindow() {
   // Create the browser window.
@@ -28,6 +29,10 @@ function createWindow() {
   mainWindow.webContents.once('dom-ready', () => {
     // Make the disconnected label appear first
     mainWindow.webContents.send('disconnected-event', 'disconnected');
+  });
+
+  Jimp.read(path.join(__dirname, "../redacted_gimp_8x8.png")).then(gimp_image => {
+    redacted_image = gimp_image;
   });
 }
 
@@ -92,16 +97,9 @@ async function redact(message: any) {
   const imageData = image ? image.toPNG() : Buffer.from('');
   const blockSize = 8;
 
-  var gimp_width = 0;
-  var gimp_height = 0;
-  await Jimp.read(path.join(__dirname, "../redacted_gimp_8x8.png")).then(gimp_image => {
-    gimp_width = gimp_image.bitmap.width;
-    gimp_height = gimp_image.bitmap.height;
-  });
-
   await Jimp.read(imageData).then(async (image) => {
     // TODO HARDCODED
-    image.crop(8, 8, gimp_width, gimp_height);
+    image.crop(8, 8, redacted_image.bitmap.width, redacted_image.bitmap.height);
 
     // Do stuff with the image.
     var original = image.clone();
@@ -169,26 +167,23 @@ async function redact(message: any) {
     }
     );
 
-    await Jimp.read(path.join(__dirname, "../redacted_gimp_8x8.png")).then(async (gimp_image) => {
-      const threshold = 0.02;
-      const percent_tried = message.text.length / message.totalLength
+    const threshold = 0.02;
+    const percent_tried = message.text.length / message.totalLength
 
-      // Crop both images and adjust brightness
-      image.crop(0, 0, image.bitmap.width * percent_tried, 40);
-      gimp_image.crop(0, 0, image.bitmap.width, image.bitmap.height);
-      image.brightness(0.4);    // TODO HARDCODED
+    // Crop both images and adjust brightness
+    image.crop(0, 0, image.bitmap.width * percent_tried, 40);
+    const cropped_redacted_image = redacted_image.clone().crop(0, 0, image.bitmap.width, image.bitmap.height);
+    image.brightness(0.4);    // TODO HARDCODED
 
-      const diff = await Jimp.diff(gimp_image, image, threshold).percent;
-      // console.log(message.text, diff);
+    const diff = await Jimp.diff(cropped_redacted_image, image, threshold).percent;
+    console.log(message.text, diff);
 
-      const dataURI = await image.getBase64Async(Jimp.MIME_PNG);
+    const dataURI = await image.getBase64Async(Jimp.MIME_PNG);
 
-      // mainWindow.webContents.send('gatherResults', {guess: message.text, score: diff, imageData: dataURI});
+    // mainWindow.webContents.send('gatherResults', {guess: message.text, score: diff, imageData: dataURI});
 
-      gimp_image.writeAsync("gimp_original.png");
-      image.writeAsync("redacted.png");
-      result = {guess: message.text, score: diff, imageData: dataURI};
-    });
+    result = {guess: message.text, score: diff, imageData: dataURI};
+
   });
   await result;
   return result;
