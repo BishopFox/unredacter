@@ -68,8 +68,8 @@ async function redact(message: any) {
   var result: any;
 
   const win = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: 300,
+    height: 80,
     show: false,
     webPreferences: {
       sandbox: true,
@@ -96,10 +96,20 @@ async function redact(message: any) {
   win.destroy();
   const imageData = image ? image.toPNG() : Buffer.from('');
   const blockSize = 8;
+  var hits = 0
 
   await Jimp.read(imageData).then(async (image) => {
     // TODO HARDCODED
     image.crop(8, 8, redacted_image.bitmap.width, redacted_image.bitmap.height);
+
+    // Make a 2D array for the new averaged pixels
+    var averagePixels = new Array(redacted_image.bitmap.width / blockSize);
+    for (var i = 0; i < averagePixels.length; i++) {
+      averagePixels[i] = new Array(redacted_image.bitmap.height / blockSize);
+      for (var j = 0; j < redacted_image.bitmap.height / blockSize; j++) {
+        averagePixels[i][j] = new Array(4).fill(-1);
+      }
+    }
 
     // Do stuff with the image.
     var original = image.clone();
@@ -107,24 +117,25 @@ async function redact(message: any) {
       // x, y is the position of this pixel on the image
       // idx is the position start position of this rgba tuple in the bitmap Buffer
       // this is the image
+      var upper_left_x = ~~(x / blockSize) * blockSize;
+      var upper_left_y = ~~(y / blockSize) * blockSize;
+      const rowsize = original.bitmap.width * 4;
 
-      // Only do this calculation if the image and original are identical for this pixel
-      //  If they're different, then we've already modified this pixel. Move on
-      if ((original.bitmap.data[idx] === image.bitmap.data[idx]) && (original.bitmap.data[idx+1] === image.bitmap.data[idx+1]) &&
-         (original.bitmap.data[idx+2] === image.bitmap.data[idx+2]) && (original.bitmap.data[idx+3] === image.bitmap.data[idx+3]))
+      const conv_x = upper_left_x/blockSize;
+      const conv_y = upper_left_y/blockSize;
+
+      // Only do this calculation if we haven't already
+      if (averagePixels[conv_x][conv_y][0] === -1)
       {
-
         // Get the running RGBA totals for the relevant NxN block
-        var upper_left_x = ~~(x / blockSize) * blockSize;
-        var upper_left_y = ~~(y / blockSize) * blockSize;
         var red = 0;
         var green = 0;
         var blue = 0;
         var alpha = 0;
-        const rowsize = original.bitmap.width * 4;
         var pixelCount = 0;
         for (var i = 0; i < blockSize; i ++) {
           for (var j = 0; j < blockSize; j ++) {
+            hits ++;
             // Red
             const redIndex = ((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 0;
             if (redIndex < this.bitmap.data.length) {
@@ -152,18 +163,18 @@ async function redact(message: any) {
           }
         }
 
-        // Now fill in the pixels for the whole block
-        for (var i = 0; i < blockSize; i ++) {
-          for (var j = 0; j < blockSize; j ++) {
-            if ((upper_left_x + i) < original.bitmap.width && (upper_left_y + j) < original.bitmap.height){
-              image.bitmap.data[((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 0] = red   / pixelCount;
-              image.bitmap.data[((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 1] = green / pixelCount;
-              image.bitmap.data[((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 2] = blue  / pixelCount;
-              image.bitmap.data[((upper_left_x + i) * 4) + ((upper_left_y + j) * rowsize) + 3] = alpha / pixelCount;
-            }
-          }
-        }
+        // Fill in the values to the average array
+        averagePixels[conv_x][conv_y][0] = red / pixelCount;
+        averagePixels[conv_x][conv_y][1] = green / pixelCount;
+        averagePixels[conv_x][conv_y][2] = blue / pixelCount;
+        averagePixels[conv_x][conv_y][3] = alpha / pixelCount;
       }
+
+      // Set the pixel equal to the known average
+      image.bitmap.data[(x * 4) + (y * rowsize) + 0] = averagePixels[conv_x][conv_y][0];
+      image.bitmap.data[(x * 4) + (y * rowsize) + 1] = averagePixels[conv_x][conv_y][1];
+      image.bitmap.data[(x * 4) + (y * rowsize) + 2] = averagePixels[conv_x][conv_y][2];
+      image.bitmap.data[(x * 4) + (y * rowsize) + 3] = averagePixels[conv_x][conv_y][3];
     }
     );
 
@@ -179,8 +190,6 @@ async function redact(message: any) {
     console.log(message.text, diff);
 
     const dataURI = await image.getBase64Async(Jimp.MIME_PNG);
-
-    // mainWindow.webContents.send('gatherResults', {guess: message.text, score: diff, imageData: dataURI});
 
     result = {guess: message.text, score: diff, imageData: dataURI};
 
