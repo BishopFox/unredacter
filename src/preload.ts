@@ -2,7 +2,7 @@
 // It has the same sandbox as a Chrome extension.
 const { ipcRenderer } = require('electron');
 
-const guessable_characters = 'abcdefghijklmnopqrstuvwxyz ';
+const guessable_characters = 'abcdefghijklmnopqrstuvwxyz';
 // TODO HARDCODED TOTAL LENGTH
 const max_length = 20;
 
@@ -43,9 +43,11 @@ async function guessRecursive(guess: string, score: number) {
   }
   var scores = [];
 
+  var parent_guess_result = await makeGuess(guess, "");
+
   for (let i = 0; i < guessable_characters.length; i++) {
     const nextGuess = guess + guessable_characters[i];
-    var result = await makeGuess(nextGuess);
+    var result = await makeGuess(nextGuess, parent_guess_result.imageData);
     // How much worse did the score get?
     console.log("score: ", nextGuess, result.score - score);
 
@@ -80,15 +82,15 @@ async function guessRecursive(guess: string, score: number) {
     const newScore = scores[i][0];
     const newGuess = scores[i][1];
 
-    if (newScore < worst_score - (threshold/newGuess.length)) {
+    if (newScore < worst_score - threshold) {
       await guessRecursive(newGuess, newScore);
     }
   }
 }
 
-async function makeGuess(guess: string) {
+async function makeGuess(guess: string, previousimage: string) {
   // TODO HARDCODED TOTAL LENGTH
-  const request = {command: "start-redacting", totalLength: max_length, text: guess}
+  const request = {command: "start-redacting", totalLength: max_length, text: guess, previousimage: previousimage}
   const result = await ipcRenderer.invoke('redact', request);
   // Send back to DOM to display results on page
   window.postMessage(result, "file://");

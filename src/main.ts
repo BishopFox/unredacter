@@ -64,6 +64,33 @@ ipcMain.handle('redact', async (event, message) => {
   return result
 })
 
+// Given an image, how many blank pixels are there on the right and left of it?
+async function getMargins(image: any) {
+  const rowsize = image.bitmap.width * 4;
+
+  // Scan a single row, in the middle
+  var hitRed = false;
+  var left_edge = 0;
+  var right_edge = 0;
+  image.scan(0, image.bitmap.height/2, image.bitmap.width, 1, function(x: number, y: number, idx: number) {
+    const red = image.bitmap.data[(x * 4) + (y * rowsize) + 0];
+    const green = image.bitmap.data[(x * 4) + (y * rowsize) + 1];
+    const blue = image.bitmap.data[(x * 4) + (y * rowsize) + 2];
+
+    // Left edge
+    if (hitRed === false && green !== 255){
+      hitRed = true;
+      left_edge = x;
+    }
+    if (green !== 255) {
+      right_edge = x;
+    }
+    // console.log(x, y, red, green, blue);
+  });
+
+  return [left_edge, right_edge];
+};
+
 async function redact(message: any) {
   var result: any;
 
@@ -178,20 +205,61 @@ async function redact(message: any) {
     }
     );
 
+    // Step 1) Crop image to the same size as the original and adjust brightness to be identical
     const threshold = 0.02;
     const percent_tried = message.text.length / message.totalLength
-
-    // Crop both images and adjust brightness
-    image.crop(0, 0, image.bitmap.width * percent_tried, 40);
-    const cropped_redacted_image = redacted_image.clone().crop(0, 0, image.bitmap.width, image.bitmap.height);
+    image.crop(0, 0, image.bitmap.width, 40);
+    const cropped_redacted_image = redacted_image.clone().crop(0, 0, image.bitmap.width, image.bitmap.height); //TODO Remove crop?
     image.brightness(0.4);    // TODO HARDCODED
+    const guess_image = image.clone();
 
-    const diff = await Jimp.diff(cropped_redacted_image, image, threshold).percent;
-    console.log(message.text, diff);
+    // Step 2) Find the area where our new image changed (compared to the previous guess)
+    var left_boundary: number = 0;
+    var right_boundary: number = 0;
+    if (message.previousimage === "") {
+      right_boundary = image.bitmap.width;
+    } else {
+      // console.log("previous image buffer:");
 
-    const dataURI = await image.getBase64Async(Jimp.MIME_PNG);
+      var replaced_imagedata = message.previousimage.replace(/^data:image\/png;base64,/, "");
+      // console.log(message.previousimage);
+      // console.log(replaced_imagedata);
 
-    result = {guess: message.text, score: diff, imageData: dataURI};
+      var prev_img_buffer = Buffer.from(replaced_imagedata, 'base64');
+
+      // console.log(prev_img_buffer);
+
+      var prev_image = await Jimp.read(prev_img_buffer);
+      // This is the changed area. The diff image is red where it was different
+      const diff = await Jimp.diff(image, prev_image, threshold);
+      [left_boundary, right_boundary] = await getMargins(diff.image);
+      diff.image.writeAsync(path.join(__dirname, "../test_diff_total.png"));
+      prev_image.writeAsync(path.join(__dirname, "../test_prev.png"));
+      // image.writeAsync(path.join(__dirname, "../test_new.png"));
+      // console.log(left_boundary, right_boundary);
+    }
+
+    //TODO Special case for whitespace
+
+    // Step 3) Crop our image down to just the area that changed
+    // console.log(left_boundary, right_boundary, width);
+    image.crop(left_boundary, 0, right_boundary-left_boundary, image.bitmap.height);
+    cropped_redacted_image.crop(left_boundary, 0, right_boundary-left_boundary, image.bitmap.height);
+
+    // Step 4) Report the similarity score for just that area
+    const diff_bounded = await Jimp.diff(image, cropped_redacted_image, threshold);
+    redacted_image.writeAsync(path.join(__dirname, "../test_redacted_uncropped.png"));
+    guess_image.writeAsync(path.join(__dirname, "../test_guess_uncropped.png"));
+    image.writeAsync(path.join(__dirname, "../test_guess.png"));
+    cropped_redacted_image.writeAsync(path.join(__dirname, "../test_redacted.png"));
+    diff_bounded.image.writeAsync(path.join(__dirname, "../test_diff.png"));
+    console.log(message.text, diff_bounded.percent);
+    const dataURI = await guess_image.getBase64Async(Jimp.MIME_PNG);
+    result = {guess: message.text, score: diff_bounded.percent, imageData: dataURI};
+
+    // if (message.text === "t "){
+    //   await new Promise(resolve => setTimeout(resolve, 5000));
+    // }
 
   });
   await result;
