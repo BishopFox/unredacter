@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Unredacter</title>
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; img-src 'self' data:;"
+    />
+    <meta
+      http-equiv="X-Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'"
+    />
+    <link rel="stylesheet" type="text/css" href="index.css">
+  </head>
+  <body>
+    <button id="start-button">Click to Start</button>
+
+    <br><br>
+    <label class="text-label">Redacted Text:</label>
+    <br>
+    <image id="original-image" src="secret.png"/>
+    <br>
+    <label class="text-label">Current Guess:</label>
+    <br>
+    <image id="current-preview-image" src=""/>
+    <br>
+    <input type="text" id="current-guess">
+    <br>
+    <label class="text-label">Best Guess:</label>
+    <br>
+    <image id="best-preview-image" src=""/>
+    <br>
+    <input type="text" id="best-guess">
+    <br>
+    <label class="text-label">Score (lower is better)</label>
+    <input type="text" id="best-score">
+    <br>
+    <label class="text-label">Offset X</label>
+    <input type="text" id="offset_x">
+    <br>
+    <label class="text-label">Offset Y</label>
+    <input type="text" id="offset_y">
+    <br>
+    <label class="text-label">Good offsets to try</label>
+    <input type="text" id="offsets_to_try">
+    <br>
+
+    <br><br><br>
+    <label class="text-label">Make Your Own Redacted Text:</label>
+    <br>
+    <input type="text" placeholder="your secret phrase here" id="text_to_redact">
+    <br>
+    <label class="text-label">Offset x</label>
+    <input type="text" value="2" id="redacted_offset_x">
+    <br>
+    <label class="text-label">Offset y</label>
+    <input type="text" value="5" id="redacted_offset_y">
+    <br>
+    <button id="redact-button">Redact Me</button>
+    <image id="redacted_image" src=""/>
+    <a id="download_link" href="path_to_file" download="redacted.png">Download</a>
+
+    <!-- You can also require other files to run in this process -->
+    <script src="./dist/renderer.js"></script>
+  </body>
+</html>
