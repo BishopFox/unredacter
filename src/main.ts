@@ -190,7 +190,7 @@ async function redact(message: any) {
   data:text/html;charset=utf-8, \
   <HTML/> \
   <body style=\"padding: 8px 0px 0px 8px; background-color:white;\"> \
-  <span style=\"padding 0px 0px 0px 0px; font-weight: normal; line-spacing: 0px; word-spacing: 0px; white-space: pre; margin: 0; font-size: 32px; font-family:'Sans-Serif'\">XYZXYZ</span><span style=\"padding 0px 0px 0px 0px; margin: 0; color: blue; font-size: 32px; font-family:'Sans-Serif'\">█</span> \
+  <span style=\"padding 0px 0px 0px 0px; font-weight: normal; line-spacing: 0px; word-spacing: 0px; white-space: pre; margin: 0; font-size: 32px; font-family:'Arial'\">XYZXYZ</span><span style=\"padding 0px 0px 0px 0px; margin: 0; color: blue; font-size: 32px; font-family:'Arial'\">█</span> \
   </body> \
   </HTML> \
   "
