@@ -168,7 +168,7 @@ async function redact(message: any) {
 
   const win = new BrowserWindow({
     width: 400,
-    height: 100,
+    height: 120,
     show: false,
     webPreferences: {
       sandbox: true,
