@@ -1,7 +1,6 @@
 import { app, BrowserWindow } from "electron";
 import * as path from "path";
-const { ipcMain } = require('electron');
-import * as fs from 'fs';
+import { ipcMain } from 'electron';
 import Jimp from 'jimp';
 
 // Hardcoded constants
