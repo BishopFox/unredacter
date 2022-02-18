@@ -1,3 +1,17 @@
-.text-label {
-    color: white;
+/* Apply a default color scheme */
+@media (prefers-color-scheme: no-preference) {
+    .text-label {
+        color: black;
+    }
+}/* Apply a light color scheme */
+@media (prefers-color-scheme: light) {
+    .text-label {
+        color: black;
+    }
+}/* Apply a dark color scheme */
+@media (prefers-color-scheme: dark) {
+    .text-label {
+        color: white;
+    }
 }
+
