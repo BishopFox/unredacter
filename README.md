@@ -1,6 +1,6 @@
 # Unredacter
 
-Shows you why you should never ever ever use pixelation as a redaction technique.
+Shows you why you should never ever ever use pixelation as a redaction technique. For a more complete writeup of how this works, [check out the my blog post here](https://bishopfox.com/blog/unredacter-tool-never-pixelation).
 
 ![wow such secrets](img/wow_such_secrets.gif)
 
