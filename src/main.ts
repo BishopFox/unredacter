@@ -4,7 +4,10 @@ import { ipcMain } from 'electron';
 import Jimp from 'jimp';
 
 // Hardcoded constants
-const blockSize = 8;
+const blockSize = 8; // 4
+const fontSize = 32; // 24
+const font = "Arial" // Consolas
+const letterSpacing = "normal"; // -0.2
 
 var mainWindow: any = null
 var redacted_image: any = null
@@ -73,22 +76,28 @@ ipcMain.handle('redact', async (event, message) => {
 // Given an image, where is the blue line indicating the end of text?
 async function getBlueMargin(image: any) {
   const rowsize = image.bitmap.width * 4;
-
+  
   var margin = 0;
   var center = 0;
   var found = false;
-  // Scan a single row, in the middle so we're sure to hit the blue box
-  image.scan(0, image.bitmap.height/2, image.bitmap.width, 1, function(x: number, y: number, idx: number) {
-    const red = image.bitmap.data[(x * 4) + (y * rowsize) + 0];
-    const green = image.bitmap.data[(x * 4) + (y * rowsize) + 1];
-    const blue = image.bitmap.data[(x * 4) + (y * rowsize) + 2];
 
-    if (found === false && blue === 255 && green !== 255 && red !== 255){
-      found = true;
-      margin = x;
-      return x;
+  // Scan a single row, in the middle so we're sure to hit the blue box
+  for (var i = 1; i < 4; i++) {
+    image.scan(0, i * image.bitmap.height/4, image.bitmap.width, 1, function(x: number, y: number, idx: number) {
+      const red = image.bitmap.data[(x * 4) + (y * rowsize) + 0];
+      const green = image.bitmap.data[(x * 4) + (y * rowsize) + 1];
+      const blue = image.bitmap.data[(x * 4) + (y * rowsize) + 2];
+
+      if (found === false && blue === 255 && green !== 255 && red !== 255){
+        found = true;
+        margin = x;
+        return x;
+      }
+    });
+    if (margin !== 0) {
+      break;
     }
-  });
+  }
 
   // Now find the vertical center point of the blue box
   found = false;
@@ -189,7 +198,7 @@ async function redact(message: any) {
   data:text/html;charset=utf-8, \
   <HTML/> \
   <body style=\"padding: 8px 0px 0px 8px; background-color:white;\"> \
-  <span style=\"padding 0px 0px 0px 0px; font-weight: normal; line-spacing: 0px; word-spacing: 0px; white-space: pre; margin: 0; font-size: 32px; font-family:'Arial'\">XYZXYZ</span><span style=\"padding 0px 0px 0px 0px; margin: 0; color: blue; font-size: 32px; font-family:'Arial'\">█</span> \
+  <span style=\"padding 0px 0px 0px 0px; font-weight: normal; line-spacing: 0px; word-spacing: 0px; letter-spacing: " + letterSpacing + "; white-space: pre; margin: 0; font-size: " + fontSize + "px; font-family:'Arial'\">XYZXYZ</span><span style=\"padding 0px 0px 0px 0px; margin: 0; color: blue; font-size: " + fontSize + "px; font-family:'" + font + "'\">█</span> \
   </body> \
   </HTML> \
   "
@@ -202,9 +211,11 @@ async function redact(message: any) {
 
   await Jimp.read(imageData).then(async (image) => {
     // Find the blue line that demarks the end of the guess string
-    var margins = await getBlueMargin(image)
+    var margins = await getBlueMargin(image);
     var blueMargin = margins[0];
     var imageCenter = margins[1];
+    //console.log("blueMargin: " + blueMargin);
+    //console.log("imageCenter: " + imageCenter);
 
     // Crop the image down according to the given offset.
     image.crop(offset_x, offset_y, blueMargin-offset_x, image.bitmap.height-offset_y);
@@ -308,7 +319,7 @@ async function redact(message: any) {
     //    We need to vertically crop the guess image down to the size of the answer
     //      but also keep the cropping along blocksize boundaries
     var adjustedCenter = imageCenter - (imageCenter % blockSize) + 4;
-    image.crop(left_edge, (adjustedCenter) - (redacted_image.bitmap.height / 2), image.bitmap.width - left_edge, redacted_image.bitmap.height); // TODO NEEDED? INTENDED?
+    image.crop(left_edge, Math.abs((adjustedCenter) - (redacted_image.bitmap.height / 2)), image.bitmap.width - left_edge, redacted_image.bitmap.height); // TODO NEEDED? INTENDED?
     var cropped_redacted_image = redacted_image.clone();
     const guess_image = image.clone();
 
