@@ -77,18 +77,24 @@ async function getBlueMargin(image: any) {
   var margin = 0;
   var center = 0;
   var found = false;
-  // Scan a single row, in the middle so we're sure to hit the blue box
-  image.scan(0, image.bitmap.height/2, image.bitmap.width, 1, function(x: number, y: number, idx: number) {
-    const red = image.bitmap.data[(x * 4) + (y * rowsize) + 0];
-    const green = image.bitmap.data[(x * 4) + (y * rowsize) + 1];
-    const blue = image.bitmap.data[(x * 4) + (y * rowsize) + 2];
 
-    if (found === false && blue === 255 && green !== 255 && red !== 255){
-      found = true;
-      margin = x;
-      return x;
+  // Scan a single row, in the middle so we're sure to hit the blue box
+  for (var i = 1; i < 4; i++) {
+    image.scan(0, i * image.bitmap.height/4, image.bitmap.width, 1, function(x: number, y: number, idx: number) {
+      const red = image.bitmap.data[(x * 4) + (y * rowsize) + 0];
+      const green = image.bitmap.data[(x * 4) + (y * rowsize) + 1];
+      const blue = image.bitmap.data[(x * 4) + (y * rowsize) + 2];
+
+      if (found === false && blue === 255 && green !== 255 && red !== 255){
+        found = true;
+        margin = x;
+        return x;
+      }
+    });
+    if (margin !== 0) {
+      break;
     }
-  });
+  }
 
   // Now find the vertical center point of the blue box
   found = false;
@@ -308,7 +314,7 @@ async function redact(message: any) {
     //    We need to vertically crop the guess image down to the size of the answer
     //      but also keep the cropping along blocksize boundaries
     var adjustedCenter = imageCenter - (imageCenter % blockSize) + 4;
-    image.crop(left_edge, (adjustedCenter) - (redacted_image.bitmap.height / 2), image.bitmap.width - left_edge, redacted_image.bitmap.height); // TODO NEEDED? INTENDED?
+    image.crop(left_edge, Math.abs((adjustedCenter) - (redacted_image.bitmap.height / 2)), image.bitmap.width - left_edge, redacted_image.bitmap.height); // TODO NEEDED? INTENDED?
     var cropped_redacted_image = redacted_image.clone();
     const guess_image = image.clone();
 
