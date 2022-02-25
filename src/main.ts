@@ -4,7 +4,10 @@ import { ipcMain } from 'electron';
 import Jimp from 'jimp';
 
 // Hardcoded constants
-const blockSize = 8;
+const blockSize = 8; // 4
+const fontSize = 32; // 24
+const font = "Arial" // Consolas
+const letterSpacing = "normal"; // -0.2
 
 var mainWindow: any = null
 var redacted_image: any = null
@@ -189,7 +192,7 @@ async function redact(message: any) {
   data:text/html;charset=utf-8, \
   <HTML/> \
   <body style=\"padding: 8px 0px 0px 8px; background-color:white;\"> \
-  <span style=\"padding 0px 0px 0px 0px; font-weight: normal; line-spacing: 0px; word-spacing: 0px; white-space: pre; margin: 0; font-size: 32px; font-family:'Arial'\">XYZXYZ</span><span style=\"padding 0px 0px 0px 0px; margin: 0; color: blue; font-size: 32px; font-family:'Arial'\">█</span> \
+  <span style=\"padding 0px 0px 0px 0px; font-weight: normal; line-spacing: 0px; word-spacing: 0px; letter-spacing: " + letterSpacing + "; white-space: pre; margin: 0; font-size: " + fontSize + "px; font-family:'Arial'\">XYZXYZ</span><span style=\"padding 0px 0px 0px 0px; margin: 0; color: blue; font-size: " + fontSize + "px; font-family:'" + font + "'\">█</span> \
   </body> \
   </HTML> \
   "
@@ -202,7 +205,7 @@ async function redact(message: any) {
 
   await Jimp.read(imageData).then(async (image) => {
     // Find the blue line that demarks the end of the guess string
-    var margins = await getBlueMargin(image)
+    var margins = await getBlueMargin(image);
     var blueMargin = margins[0];
     var imageCenter = margins[1];
 
