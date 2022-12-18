@@ -5,7 +5,7 @@ import Jimp from 'jimp';
 import * as path from "path";
 
 // Some hardcoded constants here.
-const guessable_characters = 'abcdefghijklmnopqrstuvwxyz ';
+const guessable_characters = 'etaoinshrdlucmfwgypbvkxjqz ';
 const max_length = 20;
 const blocksize = 8;
 const threshold = 0.25;
