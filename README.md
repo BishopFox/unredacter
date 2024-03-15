@@ -20,7 +20,7 @@ That's it.
 
 This is a bit manual and not at all streamlined. I think you'll see why. If someone feels like taking a shot at making this process more in-app, I'm all ears. What do I look like, an Electron developer? But yea here it is:
 
-1) Crop your image down to just the pixelated area. No borders, no other text. Replace `secret.png` with that. I recommend doing it in GiMP.
+1) Crop your image down to just the pixelated area. No borders, no other text. Replace `![feature-image] (https://save.moe/v/7JDxjs.jpeg][img]https://cdn.save.moe/d/7JDxjs.jpeg` with that. I recommend doing it in GiMP.
 
 2) Make note of the block size (it's just the size of each pixelated block). Replace `blockSize` in the code with that.
 
